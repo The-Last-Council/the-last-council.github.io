@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Last Council</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:    #c9a84c;
+      --gold-lt: #e8c97a;
+      --dark:    #0a0a0f;
+      --mid:     #12121a;
+      --text:    #d4c5a0;
+      --muted:   #6b5f45;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--dark);
+      color: var(--text);
+      font-family: 'Cinzel', serif;
+      overflow: hidden;
+    }
+
+    /* Starfield */
+    canvas#stars {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Vignette */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      background: radial-gradient(ellipse at center,
+        transparent 30%,
+        rgba(0,0,0,0.7) 100%);
+      pointer-events: none;
+    }
+
+    /* Center stage */
+    .stage {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      gap: 0;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* Ornamental rule */
+    .rule {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      width: min(480px, 90vw);
+      margin-bottom: 2.4rem;
+    }
+    .rule::before, .rule::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(to var(--dir, right), transparent, var(--gold));
+    }
+    .rule::before { --dir: right; }
+    .rule::after  { --dir: left;  }
+    .rule-gem {
+      width: 8px; height: 8px;
+      background: var(--gold);
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+
+    /* Crest / sigil */
+    .crest {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: clamp(0.65rem, 1.4vw, 0.85rem);
+      letter-spacing: 0.45em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 1.2rem;
+    }
+
+    /* Title */
+    h1 {
+      font-family: 'Cinzel Decorative', serif;
+      font-weight: 700;
+      font-size: clamp(2.2rem, 7vw, 5rem);
+      line-height: 1.1;
+      letter-spacing: 0.06em;
+      background: linear-gradient(160deg, var(--gold-lt) 0%, var(--gold) 50%, #8b6914 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 1rem;
+      filter: drop-shadow(0 0 32px rgba(201,168,76,0.25));
+    }
+
+    /* Bottom rule */
+    .rule-bottom {
+      margin-top: 2rem;
+      margin-bottom: 2.4rem;
+    }
+
+    /* Under Construction badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      border: 1px solid var(--muted);
+      border-radius: 2px;
+      padding: 0.55rem 1.4rem;
+      font-size: clamp(0.6rem, 1.3vw, 0.72rem);
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--muted);
+      position: relative;
+      overflow: hidden;
+    }
+    .badge::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(201,168,76,0.06) 50%,
+        transparent 100%);
+      animation: shimmer 3s ease-in-out infinite;
+    }
+    .badge-dot {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: var(--gold);
+      animation: pulse 2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes shimmer {
+      0%   { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* Fade-in on load */
+    .stage { animation: fadeIn 1.8s ease both; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="stars"></canvas>
+
+  <div class="stage">
+    <div class="rule"><div class="rule-gem"></div></div>
+    <p class="crest">Est. MMXXVI</p>
+    <h1>The Last Council</h1>
+    <div class="rule rule-bottom"><div class="rule-gem"></div></div>
+    <div class="badge">
+      <span class="badge-dot"></span>
+      Under Construction
+    </div>
+  </div>
+
+  <script>
+    // Procedural starfield
+    const canvas = document.getElementById('stars');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    function initStars(n = 220) {
+      stars = Array.from({ length: n }, () => ({
+        x:   Math.random() * canvas.width,
+        y:   Math.random() * canvas.height,
+        r:   Math.random() * 1.2 + 0.2,
+        a:   Math.random(),
+        da:  (Math.random() - 0.5) * 0.003,
+        speed: Math.random() * 0.06 + 0.01,
+      }));
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const s of stars) {
+        s.a = Math.max(0.05, Math.min(1, s.a + s.da));
+        if (s.a <= 0.05 || s.a >= 1) s.da *= -1;
+        s.y -= s.speed;
+        if (s.y < 0) { s.y = canvas.height; s.x = Math.random() * canvas.width; }
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(201,168,76,${s.a * 0.7})`;
+        ctx.fill();
+      }
+      requestAnimationFrame(draw);
+    }
+
+    resize();
+    initStars();
+    draw();
+    window.addEventListener('resize', () => { resize(); initStars(); });
+  </script>
+</body>
+</html>
